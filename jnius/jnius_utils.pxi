@@ -278,23 +278,10 @@ cdef int calculate_score(sign_args, args, is_varargs=False) except *:
     cdef JavaClass jc
     cdef int args_len = len(args)
     cdef int sign_args_len = len(sign_args)
-    from ctypes import c_long as long
 
     if args_len != sign_args_len and not is_varargs:
-        # if the number of arguments expected is not the same
-        # as the number of arguments the method gets
-        # it can not be the method we are looking for except
-        # if the method has varargs aka. it takes
-        # an undefined number of arguments
         return -1
     elif args_len == sign_args_len and not is_varargs:
-        # if the method has the good number of arguments and
-        # the method doesn't take varargs increment the score
-        # so that it takes precedence over a method with the same
-        # signature and varargs e.g.
-        # (Integer, Integer) takes precedence over (Integer, Integer, Integer...)
-        # and
-        # (Integer, Integer, Integer) takes precedence over (Integer, Integer, Integer...)
         score += 10
 
     for index in range(sign_args_len):
@@ -320,8 +307,7 @@ cdef int calculate_score(sign_args, args, is_varargs=False) except *:
             continue
 
         if r == 'S' or r == 'I':
-            if isinstance(arg, int) or (
-                    (isinstance(arg, long) and arg < 2147483648)):
+            if isinstance(arg, int) and arg < 2147483648:
                 score += 10
                 continue
             elif isinstance(arg, float):
@@ -331,7 +317,7 @@ cdef int calculate_score(sign_args, args, is_varargs=False) except *:
                 return -1
 
         if r == 'J':
-            if isinstance(arg, int) or isinstance(arg, long):
+            if isinstance(arg, int):
                 score += 10
                 continue
             elif isinstance(arg, float):
@@ -351,25 +337,21 @@ cdef int calculate_score(sign_args, args, is_varargs=False) except *:
                 return -1
 
         if r[0] == 'L':
-
             r = r[1:-1]
 
             if arg is None:
                 score += 10
                 continue
 
-            # if it's a string, accept any python string
             if r == 'java/lang/String' and isinstance(arg, str):
                 score += 10
                 continue
 
-            # if it's a generic object, accept python string, or any java
-            # class/object
             if r == 'java/lang/Object':
                 if isinstance(arg, (PythonJavaClass, JavaClass, JavaObject)):
                     score += 10
                     continue
-                elif isinstance(arg, base_string):
+                elif isinstance(arg, str):
                     score += 5
                     continue
                 elif isinstance(arg, (list, tuple)):
@@ -383,26 +365,18 @@ cdef int calculate_score(sign_args, args, is_varargs=False) except *:
                     continue
                 return -1
 
-            # accept an autoclass class for java/lang/Class.
             if hasattr(arg, '__javaclass__') and r == 'java/lang/Class':
                 score += 10
                 continue
 
-            # if we pass a JavaClass, ensure the definition is matching
-            # XXX FIXME what if we use a subclass or something ?
             if isinstance(arg, JavaClass):
                 jc = arg
                 if jc.__javaclass__ == r:
                     score += 10
                 else:
-                    #try:
-                    #    check_assignable_from(jc, r)
-                    #except:
-                    #    return -1
                     score += 5
                 continue
 
-            # always accept unknow object, but can be dangerous too.
             if isinstance(arg, JavaObject):
                 score += 1
                 continue
@@ -411,16 +385,13 @@ cdef int calculate_score(sign_args, args, is_varargs=False) except *:
                 score += 1
                 continue
 
-            # its a function or lambda, we can pass that as an object
             if callable(arg):
                 score += 1
                 continue
 
-            # native type? not accepted
             return -1
 
         if r[0] == '[':
-
             if arg is None:
                 score += 10
                 continue
@@ -440,20 +411,14 @@ cdef int calculate_score(sign_args, args, is_varargs=False) except *:
             if not isinstance(arg, (list, tuple)):
                 return -1
 
-            # calculate the score for our subarray
             if len(arg) > 0:
-                # if there are supplemantal arguments we compute the score
                 subscore = calculate_score([r[1:]] * len(arg), arg)
                 if subscore == -1:
                     return -1
-                # the supplemental arguments match the varargs arguments
                 score += 10
                 continue
-            # else if there is no supplemental arguments
-            # it might be the good method but there may be
-            # a method with a better signature so we don't
-            # change this method score
     return score
+
 
 
 cdef readable_sig(sig, is_var):
