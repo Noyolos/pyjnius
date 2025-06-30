@@ -1,5 +1,4 @@
-cdef str_for_c(s):
-    return s.encode('utf-8')
+cdef str_for_c(s): return s.encode('utf-8')
 
 cdef parse_definition(definition):
     # not a function, just a field
@@ -278,7 +277,7 @@ cdef int calculate_score(sign_args, args, is_varargs=False) except *:
     cdef JavaClass jc
     cdef int args_len = len(args)
     cdef int sign_args_len = len(sign_args)
-    from ctypes import c_long as long
+    if isinstance(arg, int)  
 
     if args_len != sign_args_len and not is_varargs:
         # if the number of arguments expected is not the same
@@ -320,8 +319,7 @@ cdef int calculate_score(sign_args, args, is_varargs=False) except *:
             continue
 
         if r == 'S' or r == 'I':
-            if isinstance(arg, int) or (
-                    (isinstance(arg, long) and arg < 2147483648)):
+            if isinstance(arg, int) and arg < 2147483648:
                 score += 10
                 continue
             elif isinstance(arg, float):
@@ -331,7 +329,7 @@ cdef int calculate_score(sign_args, args, is_varargs=False) except *:
                 return -1
 
         if r == 'J':
-            if isinstance(arg, int) or isinstance(arg, long):
+            if isinstance(arg, int):
                 score += 10
                 continue
             elif isinstance(arg, float):
